@@ -1,6 +1,5 @@
-from flask import Flask, request, jsonify
-import sqlite3
-
+from flask import Flask, jsonify
+import os
 app = Flask(__name__)
 
 DATABASE = "users.db"
@@ -73,5 +72,5 @@ def login():
 
 
 if __name__ == "__main__":
-    init_db()
-    app.run(host="0.0.0.0", port=5001, debug=False)
+    port = int(os.environ.get("PORT", 5002))
+    app.run(host="0.0.0.0", port=port)
