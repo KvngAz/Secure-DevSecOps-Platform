@@ -94,30 +94,35 @@ jobs:
     steps:
       - name: Run ZAP baseline scan - auth-service
         run: |
-          docker run --network host \
+          docker run --user 0:0 --network host \
             -v "${{ github.workspace }}:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t "https://secure-devsecops-auth-service.onrender.com/" \
-            -r zap-auth-report.html || true
-
+            -r zap-auth-report.html --autooff || true
+           
       - name: Run ZAP baseline scan - user-service
         run: |
-          docker run --network host \
+          docker run --user 0:0 --network host \
             -v "${{ github.workspace }}:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t "https://secure-devsecops-user-service.onrender.com/users/1" \
-            -r zap-user-report.html || true
+            -r zap-user-report.html --autooff || true
 
       - name: Run ZAP baseline scan - product-service
         run: |
-          docker run --network host \
+          docker run --user 0:0 --network host \
             -v "${{ github.workspace }}:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t "https://secure-devsecops-product-service.onrender.com/products" \
-            -r zap-product-report.html || true
+            -r zap-product-report.html --autooff || true
+
+      - name: Check ZAP reports
+        if: always()
+        run: |
+          ls -lh zap-*-report.html
 
       - name: Upload ZAP reports
         if: always()
@@ -128,6 +133,7 @@ jobs:
             zap-auth-report.html
             zap-user-report.html
             zap-product-report.html
+          if-no-files-found: error
 
   telegram-report:
     name: Send Telegram Security Report
