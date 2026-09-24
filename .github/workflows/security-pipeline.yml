@@ -81,6 +81,70 @@ jobs:
         with:
           path: .
 
+  dast:
+    name: DAST - OWASP ZAP
+    runs-on: ubuntu-latest
+    needs:
+      - sast
+      - sca
+      - container-scan
+      - sbom
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Start application
+        run: docker compose up -d --build
+
+      - name: Wait for services
+        run: |
+          sleep 10
+          curl --fail http://127.0.0.1:5001/
+          curl --fail http://127.0.0.1:5002/users/1
+          curl --fail http://127.0.0.1:5003/products
+
+      - name: Run ZAP baseline scan - auth-service
+        run: |
+          docker run --network host \
+            -v "${{ github.workspace }}:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://127.0.0.1:5001/ \
+            -r zap-auth-report.html || true
+
+      - name: Run ZAP baseline scan - user-service
+        run: |
+          docker run --network host \
+            -v "${{ github.workspace }}:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://127.0.0.1:5002/users/1 \
+            -r zap-user-report.html || true
+
+      - name: Run ZAP baseline scan - product-service
+        run: |
+          docker run --network host \
+            -v "${{ github.workspace }}:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://127.0.0.1:5003/products \
+            -r zap-product-report.html || true
+
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-dast-reports
+          path: |
+            zap-auth-report.html
+            zap-user-report.html
+            zap-product-report.html
+
+      - name: Stop application
+        if: always()
+        run: docker compose down
+
   publish-sign:
     name: Publish and Sign Images
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
