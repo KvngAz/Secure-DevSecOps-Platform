@@ -128,6 +128,9 @@ jobs:
         run: |
           cosign sign --yes "${IMAGE}@${DIGEST}"
 
+      - name: Wait for signature to become available
+        run: sleep 15
+
       - name: Verify image signature
         env:
           IMAGE: docker.io/${{ vars.DOCKERHUB_USERNAME }}/secure-devsecops-${{ matrix.service }}
