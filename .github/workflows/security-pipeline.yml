@@ -241,7 +241,7 @@ jobs:
 
   publish-sign:
     name: Publish and Sign Images
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     permissions:
