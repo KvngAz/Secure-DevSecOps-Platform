@@ -44,32 +44,27 @@ jobs:
           ignore-unfixed: true
 
   container-scan:
+   container-scan:
     name: Container Scan
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        service:
+          - auth-service
+          - user-service
+          - product-service
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Build auth-service image
-        run: docker build -t secure-devsecops-auth:ci ./services/auth-service
+      - name: Build ${{ matrix.service }} image
+        run: docker build -t secure-devsecops-${{ matrix.service }}:ci ./services/${{ matrix.service }}
 
-      - name: Scan auth-service image
+      - name: Scan ${{ matrix.service }} image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: secure-devsecops-auth:ci
+          image-ref: secure-devsecops-${{ matrix.service }}:ci
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-
-  sbom:
-    name: SBOM Generation
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Generate SBOM
-        uses: anchore/sbom-action@v0.24.0
-        with:
-          path: .
