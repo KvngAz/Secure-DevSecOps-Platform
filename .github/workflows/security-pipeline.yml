@@ -43,8 +43,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
 
-  container-scan:
-   container-scan:
+    container-scan:
     name: Container Scan
     runs-on: ubuntu-latest
 
@@ -68,3 +67,16 @@ jobs:
           image-ref: secure-devsecops-${{ matrix.service }}:ci
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+
+  sbom:
+    name: SBOM Generation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0.24.0
+        with:
+          path: .
