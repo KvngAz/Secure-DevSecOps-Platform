@@ -80,3 +80,59 @@ jobs:
         uses: anchore/sbom-action@v0.24.0
         with:
           path: .
+
+  publish-sign:
+    name: Publish and Sign Images
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    strategy:
+      matrix:
+        service:
+          - auth-service
+          - user-service
+          - product-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.0.0
+
+      - name: Build and push image
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: ./services/${{ matrix.service }}
+          push: true
+          tags: docker.io/${{ vars.DOCKERHUB_USERNAME }}/secure-devsecops-${{ matrix.service }}:${{ github.sha }}
+
+      - name: Sign image
+        env:
+          IMAGE: docker.io/${{ vars.DOCKERHUB_USERNAME }}/secure-devsecops-${{ matrix.service }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          cosign sign --yes "${IMAGE}@${DIGEST}"
+
+      - name: Verify image signature
+        env:
+          IMAGE: docker.io/${{ vars.DOCKERHUB_USERNAME }}/secure-devsecops-${{ matrix.service }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          cosign verify "${IMAGE}@${DIGEST}" \
+            --certificate-identity="https://github.com/KvngAz/Secure-DevSecOps-Platform/.github/workflows/security-pipeline.yml@refs/heads/main" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
