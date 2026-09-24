@@ -89,28 +89,16 @@ jobs:
       - sca
       - container-scan
       - sbom
+      - publish-sign
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Start application
-        run: docker compose up -d --build
-
-      - name: Wait for services
-        run: |
-          sleep 10
-          curl --fail http://127.0.0.1:5001/
-          curl --fail http://127.0.0.1:5002/users/1
-          curl --fail http://127.0.0.1:5003/products
-
       - name: Run ZAP baseline scan - auth-service
         run: |
           docker run --network host \
             -v "${{ github.workspace }}:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
-            -t http://127.0.0.1:5001/ \
+            -t "https://secure-devsecops-auth-service.onrender.com/" \
             -r zap-auth-report.html || true
 
       - name: Run ZAP baseline scan - user-service
@@ -119,7 +107,7 @@ jobs:
             -v "${{ github.workspace }}:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
-            -t http://127.0.0.1:5002/users/1 \
+            -t "https://secure-devsecops-user-service.onrender.com/users/1" \
             -r zap-user-report.html || true
 
       - name: Run ZAP baseline scan - product-service
@@ -128,7 +116,7 @@ jobs:
             -v "${{ github.workspace }}:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
-            -t http://127.0.0.1:5003/products \
+            -t "https://secure-devsecops-product-service.onrender.com/products" \
             -r zap-product-report.html || true
 
       - name: Upload ZAP reports
@@ -140,10 +128,6 @@ jobs:
             zap-auth-report.html
             zap-user-report.html
             zap-product-report.html
-
-      - name: Stop application
-        if: always()
-        run: docker compose down
 
   telegram-report:
     name: Send Telegram Security Report
